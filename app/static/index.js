@@ -49,6 +49,9 @@ class Stop {
     });
   }
 }
+ 
+
+
 
 class Route {
   constructor(route, map) {
@@ -56,9 +59,26 @@ class Route {
       path: route.path,
       map: map,
       geodesic: true,
-      strokeOpacity: 0.8,
+    strokeOpacity: 0.8,
       strokeWeight: 4
     });
+
+    this.polyline.addListener("click", () => {
+  new google.maps.InfoWindow({
+    content: `<strong>${route.name}</strong>`,
+    position: route.path[0]
+  }).open(map);
+});
+
+
+    // // Optional: click anywhere on route to list stops
+    // this.polyline.addListener("click", () => {
+    //   const stopNames = route.path.map((pos, i) => this.stops[i]?.name || `Stop ${i+1}`).join("<br>");
+    //   new google.maps.InfoWindow({
+    //     content: `<strong>${route.name}</strong><br>${stopNames}`,
+    //     position: route.path[0]
+    //   }).open(map);
+    // });
   }
 }
 
@@ -83,8 +103,10 @@ class MapApp {
     this.map.setCenter(this.defaultLocation);
     this.map.setZoom(15);
 
-    await this.loadRoutes();
+
     await this.loadStops();
+    await this.loadRoutes();
+  
     await this.loadBuses();
 
     // 🔄 refresh buses every 5 seconds (ready for real-time)
@@ -92,36 +114,58 @@ class MapApp {
   }
 
   /* ===== API CALLS ===== */
+ 
 
-  async loadBuses() {
-    const response = await fetch("/api/buses");
-    const data = await response.json();
 
-    data.forEach(bus => {
-      if (this.buses.has(bus.id)) {
-        // Update existing bus
-        this.buses.get(bus.id).update(bus.location);
-      } else {
-        // Create new bus
-        this.buses.set(bus.id, new Bus(bus, this.map));
-      }
-    });
-  }
 
-  async loadStops() {
-    const response = await fetch("/api/stops");
-    const data = await response.json();
+async loadBuses() {
+  const response = await fetch("/api/buses");
+  const data = await response.json();
 
-    data.forEach(stop => {
+  data.forEach(async bus => {
+    if (this.buses.has(bus.id)) {
+      this.buses.get(bus.id).update(bus.location);
+    } else {
+      const busObj = new Bus(bus, this.map);
+
+      // Optional: get address from backend
+      const addr = await fetch(`/api/geocode/reverse?lat=${bus.location.lat}&lng=${bus.location.lng}`).then(r => r.json());
+      busObj.infoWindow.setContent(`<strong>Bus ${bus.id}</strong><br>${addr.formatted_address}`);
+
+      this.buses.set(bus.id, busObj);
+    }
+  });
+}
+
+ 
+
+async loadStops() {
+  const response = await fetch("/api/stops");
+  const data = await response.json();
+
+  this.stops = []; // clear old stops if refreshing
+  data.forEach(stop => {
+    if (stop.location) {
       this.stops.push(new Stop(stop, this.map));
-    });
-  }
+    } else {
+      console.warn(`Stop ${stop.name} has no location!`);
+    }
+  });
+}
+
+
 
   async loadRoutes() {
+    // Fetch routes from backend
     const response = await fetch("/api/routes");
     const data = await response.json();
 
+    this.routes = []; // clear old routes
     data.forEach(route => {
+      // If route.path is empty, try building it from stops
+      if (!route.path || route.path.length === 0) {
+        route.path = this.stops.map(stop => stop.position);
+      }
       this.routes.push(new Route(route, this.map));
     });
   }

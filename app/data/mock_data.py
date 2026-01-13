@@ -14,24 +14,14 @@ buses = [
 stops = [
     {
         "id": 1,
-        "name": "AAU Main Gate",
-        "location": {"lat": 31.9450, "lng": 35.9287}
+        "name": "Al-Ahliyya Amman University Main Gate",
     },
     {
         "id": 2,
-        "name": "Sports Complex",
-        "location": {"lat": 31.9485, "lng": 35.9350}
-    }
-]
-
-routes = [
+        "name": "Khalda Circle",
+    },
     {
-        "id": 1,
-        "name": "AAU – City Center",
-        "path": [
-            {"lat": 31.9450, "lng": 35.9287},
-            {"lat": 31.9485, "lng": 35.9350},
-            {"lat": 31.9520, "lng": 35.9400}
-        ]
+        "id": 3,
+        "name": "Princess Sumaya University for Technology",
     }
 ]

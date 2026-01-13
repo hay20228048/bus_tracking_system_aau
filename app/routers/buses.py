@@ -6,5 +6,5 @@ from app.data.mock_data import buses
 router = APIRouter(prefix="/api/buses", tags=["Buses"])
 
 @router.get("/", response_model=List[Bus])
-def get_buses():
+async def get_buses():
     return buses

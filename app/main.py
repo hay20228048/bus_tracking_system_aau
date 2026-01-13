@@ -1,40 +1,11 @@
-# # # FastAPI backend
-
-# from fastapi import FastAPI, Request
-# from fastapi.responses import HTMLResponse
-# from fastapi.staticfiles import StaticFiles
-# from fastapi.templating import Jinja2Templates
-# from dotenv import load_dotenv
-# import os
-
-# # Load environment variables
-# load_dotenv()
-# GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
-
-# app = FastAPI()
-
-# # Mount static folder
-# app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
-# # Set templates folder
-# templates = Jinja2Templates(directory="app/templates")
-
-# @app.get("/", response_class=HTMLResponse)
-# async def get_index(request: Request):
-#     return templates.TemplateResponse("index.html", {
-#         "request": request,
-#         "GOOGLE_MAPS_API_KEY": GOOGLE_MAPS_API_KEY
-#     })
-
-
-
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
 import os
-
+from app.services.cache import populate_stops
+from contextlib import asynccontextmanager
 # -------------------------------
 # Load environment variables
 # -------------------------------
@@ -44,13 +15,26 @@ GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 if not GOOGLE_MAPS_API_KEY:
     raise RuntimeError("GOOGLE_MAPS_API_KEY is missing in .env file")
 
+
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Populate geocoded stops once at startup
+    await populate_stops()
+
+    yield
+ 
+
+
 # -------------------------------
 # FastAPI app
 # -------------------------------
 app = FastAPI(
     title="Bus Tracking System",
     description="FastAPI backend for buses, stops, and routes",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan   # ✅ THIS IS THE MISSING PIECE
 )
 
 # -------------------------------
@@ -62,11 +46,12 @@ templates = Jinja2Templates(directory="app/templates")
 # -------------------------------
 # Routers (API endpoints)
 # -------------------------------
-from app.routers import buses, stops, routes
 
-app.include_router(buses.router)
+from app.routers import buses, stops, routes, geocoding
 app.include_router(stops.router)
 app.include_router(routes.router)
+app.include_router(buses.router)
+app.include_router(geocoding.router)
 
 # -------------------------------
 # Frontend route
@@ -83,3 +68,5 @@ async def index(request: Request):
             "GOOGLE_MAPS_API_KEY": GOOGLE_MAPS_API_KEY
         }
     )
+
+
