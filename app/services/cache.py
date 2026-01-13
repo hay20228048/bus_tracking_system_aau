@@ -14,11 +14,10 @@ async def populate_stops():
 
     GEOCODED_STOPS.clear()  # ✅ better than reassigning
 
-    print("Populating stops from mock_data:", stops_data)
-
+ 
     for stop in stops_data:
         geo = await GeocodingService.geocode_address(stop["name"])
-        print("Geocoded:", geo)
+ 
 
         if geo:
             GEOCODED_STOPS.append({
@@ -30,5 +29,4 @@ async def populate_stops():
                 }
             })
 
-    print("GEOCODED_STOPS populated:")
-    print(GEOCODED_STOPS)
+ 

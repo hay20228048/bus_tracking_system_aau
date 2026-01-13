@@ -28,6 +28,10 @@ class Bus {
   }
 }
 
+
+
+
+
 class Stop {
   constructor(stop, map) {
     this.name = stop.name;
@@ -71,14 +75,7 @@ class Route {
 });
 
 
-    // // Optional: click anywhere on route to list stops
-    // this.polyline.addListener("click", () => {
-    //   const stopNames = route.path.map((pos, i) => this.stops[i]?.name || `Stop ${i+1}`).join("<br>");
-    //   new google.maps.InfoWindow({
-    //     content: `<strong>${route.name}</strong><br>${stopNames}`,
-    //     position: route.path[0]
-    //   }).open(map);
-    // });
+
   }
 }
 
@@ -88,10 +85,11 @@ class MapApp {
   constructor() {
     this.defaultLocation = { lat: 31.9450, lng: 35.9287 }; // AAU
     this.map = null;
-
     this.buses = new Map();   // id → Bus
     this.stops = [];
     this.routes = [];
+    this.routePath = [];
+
   }
 
   async init() {
@@ -108,35 +106,31 @@ class MapApp {
     await this.loadRoutes();
   
     await this.loadBuses();
-
-    // 🔄 refresh buses every 5 seconds (ready for real-time)
-    setInterval(() => this.loadBuses(), 5000);
-  }
+   }
 
   /* ===== API CALLS ===== */
  
+ 
 
+  async loadBuses() {
+    const response = await fetch("/api/buses");
+    const data = await response.json();
 
+    data.forEach(async bus => {
+      if (this.buses.has(bus.id)) {
+        this.buses.get(bus.id).update(bus.location);
+     } else {
+        const busObj = new Bus(bus, this.map);
 
-async loadBuses() {
-  const response = await fetch("/api/buses");
-  const data = await response.json();
+       // Optional: get address from backend
+        const addr = await fetch(`/api/geocode/reverse?lat=${bus.location.lat}&lng=${bus.location.lng}`).then(r => r.json());
+        busObj.infoWindow.setContent(`<strong>Bus ${bus.id}</strong><br>${addr.formatted_address}`);
 
-  data.forEach(async bus => {
-    if (this.buses.has(bus.id)) {
-      this.buses.get(bus.id).update(bus.location);
-    } else {
-      const busObj = new Bus(bus, this.map);
-
-      // Optional: get address from backend
-      const addr = await fetch(`/api/geocode/reverse?lat=${bus.location.lat}&lng=${bus.location.lng}`).then(r => r.json());
-      busObj.infoWindow.setContent(`<strong>Bus ${bus.id}</strong><br>${addr.formatted_address}`);
-
-      this.buses.set(bus.id, busObj);
-    }
-  });
-}
-
+       this.buses.set(bus.id, busObj);
+      }
+   });
+ }
+ 
  
 
 async loadStops() {
@@ -166,10 +160,15 @@ async loadStops() {
       if (!route.path || route.path.length === 0) {
         route.path = this.stops.map(stop => stop.position);
       }
+      this.routePath = route.path; // ✅ store for buses
       this.routes.push(new Route(route, this.map));
     });
   }
+
+ 
+  
 }
+ 
 
 
 /* ========= Run App ========= */

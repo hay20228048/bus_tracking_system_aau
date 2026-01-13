@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/routes", tags=["Routes"])
 async def get_routes():
     if not GEOCODED_STOPS:
         return []
-    print(":::::::::::::::::::"*20, GEOCODED_STOPS)
+ 
     dynamic_route = {
         "id": 1,
         "name": "Dynamic Route - All Stops",
