@@ -1,9 +1,7 @@
-/* ========= Entity Classes ========= */
-
 class Bus {
-  constructor(id, position, map) {
-    this.id = id;
-    this.position = position;
+  constructor(bus, map) {
+    this.id = bus.id;
+    this.position = bus.location;
     this.map = map;
 
     this.marker = new google.maps.Marker({
@@ -24,28 +22,26 @@ class Bus {
     });
   }
 
-  updatePosition(newPosition) {
-    this.position = newPosition;
-    this.marker.setPosition(newPosition);
+  update(location) {
+    this.position = location;
+    this.marker.setPosition(location);
   }
 }
 
 class Stop {
-  constructor(name, position, map) {
-    this.name = name;
-    this.position = position;
+  constructor(stop, map) {
+    this.name = stop.name;
+    this.position = stop.location;
     this.map = map;
 
     this.marker = new google.maps.Marker({
       position: this.position,
       map: this.map,
-      icon: {
-        url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
-      }
+      icon: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
     });
 
     this.infoWindow = new google.maps.InfoWindow({
-      content: `<strong>Stop:</strong> ${this.name}`
+      content: `<strong>${this.name}</strong>`
     });
 
     this.marker.addListener("click", () => {
@@ -55,11 +51,10 @@ class Stop {
 }
 
 class Route {
-  constructor(path, map) {
-    this.map = map;
+  constructor(route, map) {
     this.polyline = new google.maps.Polyline({
-      path: path,
-      map: this.map,
+      path: route.path,
+      map: map,
       geodesic: true,
       strokeOpacity: 0.8,
       strokeWeight: 4
@@ -67,15 +62,14 @@ class Route {
   }
 }
 
-/* ========= Main Map App ========= */
 
+/* ========= Main Map App ========= */
 class MapApp {
   constructor() {
     this.defaultLocation = { lat: 31.9450, lng: 35.9287 }; // AAU
     this.map = null;
-    this.infowindow = null;
 
-    this.buses = [];
+    this.buses = new Map();   // id → Bus
     this.stops = [];
     this.routes = [];
   }
@@ -85,63 +79,54 @@ class MapApp {
 
     const gmpMap = document.querySelector("gmp-map");
     this.map = gmpMap.innerMap;
-    this.infowindow = new google.maps.InfoWindow();
 
     this.map.setCenter(this.defaultLocation);
     this.map.setZoom(15);
 
-    this.renderRoute();
-    this.renderStops();
-    this.renderBuses();
+    await this.loadRoutes();
+    await this.loadStops();
+    await this.loadBuses();
+
+    // 🔄 refresh buses every 5 seconds (ready for real-time)
+    setInterval(() => this.loadBuses(), 5000);
   }
 
-  /* ===== Routes ===== */
-  renderRoute() {
-    const routePath = [
-      { lat: 31.9450, lng: 35.9287 },
-      { lat: 31.9485, lng: 35.9350 },
-      { lat: 31.9520, lng: 35.9400 }
-    ];
+  /* ===== API CALLS ===== */
 
-    const route = new Route(routePath, this.map);
-    this.routes.push(route);
-  }
+  async loadBuses() {
+    const response = await fetch("/api/buses");
+    const data = await response.json();
 
-  /* ===== Stops ===== */
-  renderStops() {
-    const stopData = [
-      { name: "AAU Main Gate", lat: 31.9450, lng: 35.9287 },
-      { name: "Sports Complex", lat: 31.9485, lng: 35.9350 },
-      { name: "City Center Stop", lat: 31.9520, lng: 35.9400 }
-    ];
-
-    stopData.forEach(stop => {
-      const stopMarker = new Stop(
-        stop.name,
-        { lat: stop.lat, lng: stop.lng },
-        this.map
-      );
-      this.stops.push(stopMarker);
+    data.forEach(bus => {
+      if (this.buses.has(bus.id)) {
+        // Update existing bus
+        this.buses.get(bus.id).update(bus.location);
+      } else {
+        // Create new bus
+        this.buses.set(bus.id, new Bus(bus, this.map));
+      }
     });
   }
 
-  /* ===== Buses ===== */
-  renderBuses() {
-    const busData = [
-      { id: 1, lat: 31.9465, lng: 35.9310 },
-      { id: 2, lat: 31.9500, lng: 35.9370 }
-    ];
+  async loadStops() {
+    const response = await fetch("/api/stops");
+    const data = await response.json();
 
-    busData.forEach(bus => {
-      const busMarker = new Bus(
-        bus.id,
-        { lat: bus.lat, lng: bus.lng },
-        this.map
-      );
-      this.buses.push(busMarker);
+    data.forEach(stop => {
+      this.stops.push(new Stop(stop, this.map));
+    });
+  }
+
+  async loadRoutes() {
+    const response = await fetch("/api/routes");
+    const data = await response.json();
+
+    data.forEach(route => {
+      this.routes.push(new Route(route, this.map));
     });
   }
 }
+
 
 /* ========= Run App ========= */
 
