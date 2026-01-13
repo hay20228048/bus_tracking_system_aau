@@ -112,25 +112,46 @@ class MapApp {
  
  
 
-  async loadBuses() {
-    const response = await fetch("/api/buses");
-    const data = await response.json();
+//   async loadBuses() {
+//     const response = await fetch("/api/buses");
+//     const data = await response.json();
 
-    data.forEach(async bus => {
-      if (this.buses.has(bus.id)) {
-        this.buses.get(bus.id).update(bus.location);
-     } else {
-        const busObj = new Bus(bus, this.map);
+//     data.forEach(async bus => {
+//       if (this.buses.has(bus.id)) {
+//         this.buses.get(bus.id).update(bus.location);
+//      } else {
+//         const busObj = new Bus(bus, this.map);
 
-       // Optional: get address from backend
-        const addr = await fetch(`/api/geocode/reverse?lat=${bus.location.lat}&lng=${bus.location.lng}`).then(r => r.json());
-        busObj.infoWindow.setContent(`<strong>Bus ${bus.id}</strong><br>${addr.formatted_address}`);
+//        // Optional: get address from backend
+//         const addr = await fetch(`/api/geocode/reverse?lat=${bus.location.lat}&lng=${bus.location.lng}`).then(r => r.json());
+//         busObj.infoWindow.setContent(`<strong>Bus ${bus.id}</strong><br>${addr.formatted_address}`);
 
-       this.buses.set(bus.id, busObj);
-      }
-   });
- }
+//        this.buses.set(bus.id, busObj);
+//       }
+//    });
+//  }
  
+
+ async loadBuses() {
+  const response = await fetch("/api/buses");
+  const data = await response.json();
+
+  data.forEach(async bus => {
+    if (this.buses.has(bus.id)) {
+      this.buses.get(bus.id).update(bus.location);
+    } else {
+      const busObj = new Bus(bus, this.map);
+      this.buses.set(bus.id, busObj);
+    }
+
+    // Example: show ETA to first stop
+    if (this.stops.length > 0) {
+      const eta = await fetchETA(bus.location, this.stops[0].position);
+      busObj.infoWindow.setContent(`<strong>Bus ${bus.id}</strong><br>ETA to ${this.stops[0].name}: ${Math.round(eta.etaSeconds/60)} min`);
+    }
+  });
+}
+
  
 
 async loadStops() {
@@ -163,12 +184,28 @@ async loadStops() {
       this.routePath = route.path; // ✅ store for buses
       this.routes.push(new Route(route, this.map));
     });
-  }
-
- 
+  } 
   
 }
  
+
+
+
+async function fetchETA(busLocation, stopLocation) {
+  const origins = `${busLocation.lat},${busLocation.lng}`;
+  const destinations = `${stopLocation.lat},${stopLocation.lng}`;
+  
+  const res = await fetch(`/api/distance/eta?origins=${origins}&destinations=${destinations}`);
+  const data = await res.json();
+  
+  if (data.results.length > 0) {
+    const etaSeconds = data.results[0].duration_seconds;
+    const distanceMeters = data.results[0].distance_meters;
+    console.log(`Distance: ${distanceMeters}m, ETA: ${etaSeconds/60} min`);
+    return { distanceMeters, etaSeconds };
+  }
+  return null;
+}
 
 
 /* ========= Run App ========= */

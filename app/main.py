@@ -47,11 +47,13 @@ templates = Jinja2Templates(directory="app/templates")
 # Routers (API endpoints)
 # -------------------------------
 
-from app.routers import buses, stops, routes, geocoding
+from app.routers import buses, stops, routes, geocoding, distance_matrix  
+
 app.include_router(stops.router)
 app.include_router(routes.router)
 app.include_router(buses.router)
 app.include_router(geocoding.router)
+app.include_router(distance_matrix.router)  # <-- add this
 
 # -------------------------------
 # Frontend route
