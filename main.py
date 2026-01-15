@@ -1,0 +1,58 @@
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from contextlib import asynccontextmanager
+from src.geo_map.services.stops import PopulateStops
+from src.geo_map.route import router
+from src.utils.config import GOOGLE_MAPS_API_KEY
+
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Populate geocoded stops once at startup
+    service = PopulateStops()
+    await service.populate_stops()
+
+    yield
+ 
+
+
+# -------------------------------
+# FastAPI app
+# -------------------------------
+app = FastAPI(
+    title="Bus Tracking System",
+    description="FastAPI backend for buses, stops, and routes",
+    version="1.0.0",
+    lifespan=lifespan   # ✅ THIS IS THE MISSING PIECE
+)
+
+# -------------------------------
+# Static & Templates
+# -------------------------------
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+
+
+app.include_router(router)
+
+# -------------------------------
+# Frontend route
+# -------------------------------
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    """
+    Serves the main map UI
+    """
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "GOOGLE_MAPS_API_KEY": GOOGLE_MAPS_API_KEY
+        }
+    )
+
+

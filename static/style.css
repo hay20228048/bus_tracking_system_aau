@@ -1,0 +1,13 @@
+/* Make the map fill the full viewport */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+
+/* Styling for the autocomplete input container */
+.place-picker-container {
+  padding: 20px;
+}

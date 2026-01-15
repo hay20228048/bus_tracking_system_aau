@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Maps and Places Autocomplete</title>
+    <script type="module" 
+      src="https://ajax.googleapis.com/ajax/libs/@googlemaps/extended-component-library/0.6.11/index.min.js">
+    </script>
+    <link rel="stylesheet" href="/static/style.css"/>
+  </head>
+  <body>
+    <!-- Load Google Maps API using your API key -->
+    <gmpx-api-loader key="{{ GOOGLE_MAPS_API_KEY }}" 
+     solution-channel="GMP_GE_mapsandplacesautocomplete_v2">
+    </gmpx-api-loader>
+
+    <!-- Google Map component -->
+          <gmp-map zoom="16" map-id="DEMO_MAP_ID"
+                center="40.749933,-73.98633">
+
+    <!-- Place autocomplete input positioned as a map control -->
+        <div slot="control-block-start-inline-start" class="place-picker-container">
+        <gmpx-place-picker placeholder="Enter an address"
+          countries="JO"
+        ></gmpx-place-picker>
+      </div>
+      
+      <!-- Marker that moves to the selected place -->
+      <gmp-advanced-marker></gmp-advanced-marker>
+    </gmp-map>
+
+    <script type="module" src="/static/index.js"></script>
+  </body>
+</html>
